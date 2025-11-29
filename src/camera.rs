@@ -8,6 +8,7 @@ const ZOOM_SCROLL_SPEED: f32 = 0.1;
 const ZOOM_SCROLL_MAX: f32 = 1.;
 const ZOOM_SCROLL_MIN: f32 = 0.01;
 const DEFAULT_ZOOM: f32 = 0.1;
+const BASE_SPACING: f32 = 40.0;
 
 /// Manages the camera behavior, including zooming and movement.
 pub struct CameraPlugin;
@@ -26,7 +27,7 @@ impl Plugin for CameraPlugin {
         .add_systems(Startup, setup_grid_pool)
         .add_systems(Update, movement_camera)
         .add_systems(Update, update_information)
-        .add_systems(Update, update_grid_dots)
+        .add_systems(Update, update_grid_sprites)
         .add_systems(Update, zoom_camera);
     }
 }
@@ -48,13 +49,26 @@ struct CameraInformation;
 struct CursorInformation;
 
 /// Sets up the 2D camera with an orthographic projection.
-fn setup_camera(mut commands: Commands, camera_settings: Res<CameraSettings>) {
+fn setup_camera(
+    mut commands: Commands,
+    camera_settings: Res<CameraSettings>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     commands.spawn((
         Camera2d,
         Projection::from(OrthographicProjection {
             scale: camera_settings.current_zoom,
             ..OrthographicProjection::default_2d()
         }),
+    ));
+
+    commands.spawn((
+        Mesh2d(meshes.add(Mesh::from(Circle {
+            radius: 100.0,
+            ..Default::default()
+        }))),
+        MeshMaterial2d(materials.add(ColorMaterial::from(Color::WHITE))),
     ));
 }
 
@@ -181,37 +195,32 @@ fn movement_camera(
         } * camera_settings.current_zoom;
 }
 
-// 1. Un composant pour identifier nos points (pour ne pas bouger le joueur ou les ennemis)
+const DOT_POOL_SIZE: usize = 5000;
+
+// Component pour identifier nos points
 #[derive(Component)]
 struct GridDot;
 
-// 2. Configuration
-const GRID_POOL_SIZE: usize = 1500; // Assez pour couvrir un écran 4K
-const BASE_SPACING: f32 = 50.0; // Espace standard entre les points
-
-// --- SYSTEM : SETUP (On crée les points une seule fois) ---
 fn setup_grid_pool(mut commands: Commands) {
-    // On spawn 1500 points cachés au début.
-    // On utilise Sprite (plus léger que Mesh2d pour de simples carrés/points)
-    for _ in 0..GRID_POOL_SIZE {
+    let dot_color = Color::srgba(0.5, 0.5, 0.5, 0.4);
+
+    for _ in 0..DOT_POOL_SIZE {
         commands.spawn((
             Sprite {
-                color: Color::srgba(0.5, 0.5, 0.5, 0.5), // Gris semi-transparent
-                custom_size: Some(Vec2::new(4.0, 4.0)),  // Taille du point
+                color: dot_color,
+                custom_size: Some(Vec2::splat(4.0)),
                 ..default()
             },
-            Transform::from_xyz(0.0, 0.0, -10.0), // Z négatif pour être derrière
-            Visibility::Hidden, // Caché par défaut tant que la caméra n'est pas là
+            Transform::from_xyz(0.0, 0.0, -100.0),
+            Visibility::Hidden,
             GridDot,
         ));
     }
 }
 
-// --- SYSTEM : UPDATE (La magie des Maths) ---
-
-fn update_grid_dots(
+fn update_grid_sprites(
     camera_q: Single<(&Transform, &Projection), With<Camera>>,
-    window_q: Single<&Window, With<PrimaryWindow>>, // <--- On récupère la fenêtre
+    window_q: Single<&Window, With<PrimaryWindow>>,
     mut dots_q: Query<
         (&mut Transform, &mut Visibility, &mut Sprite),
         (With<GridDot>, Without<Camera>),
@@ -220,66 +229,46 @@ fn update_grid_dots(
     let (cam_transform, projection) = camera_q.into_inner();
     let window = window_q.into_inner();
 
-    // 1. Zoom
     let zoom = if let Projection::Orthographic(ortho) = projection {
         ortho.scale
     } else {
         1.0
     };
 
-    // 2. Calculer la taille visible du monde (World Space)
-    // On convertit la taille de la fenêtre (pixels) en taille monde (coordonnées)
-    // On ajoute un petit buffer (+ 100.0) pour ne pas voir les points apparaître brutalement
-    let visible_width = window.width() * zoom + 200.0;
-    let visible_height = window.height() * zoom + 200.0;
-
-    // 3. Logique d'espacement (LOD)
-    // spacing = distance entre deux points dans le monde.
-    // Plus on dézoome (zoom augmente), plus les points s'écartent.
-
-    // Taille des points (ils grossissent un peu avec le zoom pour rester visibles)
     let step = 2.0_f32.powf(zoom.log2().floor());
-
-    // On s'assure de ne jamais descendre en dessous de 1.0 pour éviter les bugs au zoom max
     let spacing_multiplier = step.max(1.0);
-
     let spacing = BASE_SPACING * spacing_multiplier;
 
-    // Pour la taille des points : on veut qu'ils aient toujours la même taille EN PIXELS (écran).
-    // Donc on multiplie leur taille Monde par le zoom.
-    let dot_size = 4.0 * zoom;
+    let dot_size = 3.0 * zoom;
 
-    // 4. Calculer les bornes (Gauche, Droite, Haut, Bas)
+    let visible_width = window.width() * zoom + (spacing * 4.0);
+    let visible_height = window.height() * zoom + (spacing * 4.0);
+
     let cam_x = cam_transform.translation.x;
     let cam_y = cam_transform.translation.y;
 
-    let left_bound = cam_x - (visible_width / 2.0);
-    let bottom_bound = cam_y - (visible_height / 2.0);
+    let left = cam_x - visible_width / 2.0;
+    let bottom = cam_y - visible_height / 2.0;
 
-    let right_bound = cam_x + (visible_width / 2.0);
-    let top_bound = cam_y + (visible_height / 2.0);
+    let right = cam_x + visible_width / 2.0;
+    let top = cam_y + visible_height / 2.0;
 
-    // 5. Trouver le premier point de la grille (Snapping Mathématique)
-    // C'est ça qui empêche l'effet de "glissement"
-    let start_x = (left_bound / spacing).floor() * spacing;
-    let start_y = (bottom_bound / spacing).floor() * spacing;
+    let start_x = (left / spacing).floor() * spacing;
+    let start_y = (bottom / spacing).floor() * spacing;
 
-    // 6. Boucle de placement
     let mut dot_iter = dots_q.iter_mut();
 
     let mut current_x = start_x;
-    while current_x <= right_bound {
+    while current_x <= right {
         let mut current_y = start_y;
-        while current_y <= top_bound {
+        while current_y <= top {
             if let Some((mut transform, mut visibility, mut sprite)) = dot_iter.next() {
-                // Positionnement
                 transform.translation.x = current_x;
                 transform.translation.y = current_y;
-                // On garde le Z bien au fond
-                transform.translation.z = -10.0;
+                transform.translation.z = -100.0;
 
-                // Mise à jour visuelle
                 sprite.custom_size = Some(Vec2::splat(dot_size));
+
                 *visibility = Visibility::Visible;
             } else {
                 break;

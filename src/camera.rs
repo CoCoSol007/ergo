@@ -24,7 +24,7 @@ impl Plugin for CameraPlugin {
         })
         .add_systems(Startup, setup_camera)
         .add_systems(Startup, setup_informations)
-        .add_systems(Startup, setup_grid_pool)
+        .add_systems(Update, manage_grid_pool_size)
         .add_systems(Update, movement_camera)
         .add_systems(Update, update_information)
         .add_systems(Update, update_grid_sprites)
@@ -195,26 +195,40 @@ fn movement_camera(
         } * camera_settings.current_zoom;
 }
 
-const DOT_POOL_SIZE: usize = 5000;
-
-// Component pour identifier nos points
 #[derive(Component)]
 struct GridDot;
 
-fn setup_grid_pool(mut commands: Commands) {
-    let dot_color = Color::srgba(0.5, 0.5, 0.5, 0.4);
+fn manage_grid_pool_size(
+    mut commands: Commands,
+    window_q: Single<&Window, With<PrimaryWindow>>,
+    dots_q: Query<&GridDot>,
+) {
+    let window = window_q.into_inner();
 
-    for _ in 0..DOT_POOL_SIZE {
-        commands.spawn((
-            Sprite {
-                color: dot_color,
-                custom_size: Some(Vec2::splat(4.0)),
-                ..default()
-            },
-            Transform::from_xyz(0.0, 0.0, -100.0),
-            Visibility::Hidden,
-            GridDot,
-        ));
+    let cols_needed = (window.width() / BASE_SPACING) * 2.0;
+    let rows_needed = (window.height() / BASE_SPACING) * 2.0;
+
+    let safe_count = ((cols_needed * rows_needed) * 1.1) as usize;
+
+    let current_count = dots_q.iter().len();
+
+    if current_count < safe_count {
+        let missing = safe_count - current_count;
+
+        let dot_color = Color::srgba(0.5, 0.5, 0.5, 0.4);
+
+        for _ in 0..missing {
+            commands.spawn((
+                Sprite {
+                    color: dot_color,
+                    custom_size: Some(Vec2::splat(4.0)),
+                    ..default()
+                },
+                Transform::from_xyz(0.0, 0.0, -100.0),
+                Visibility::Hidden,
+                GridDot,
+            ));
+        }
     }
 }
 
@@ -236,21 +250,19 @@ fn update_grid_sprites(
     };
 
     let step = 2.0_f32.powf(zoom.log2().floor());
-    let spacing_multiplier = step.max(1.0);
-    let spacing = BASE_SPACING * spacing_multiplier;
-
+    let spacing = BASE_SPACING * step.max(1.0);
     let dot_size = 3.0 * zoom;
 
-    let visible_width = window.width() * zoom + (spacing * 4.0);
-    let visible_height = window.height() * zoom + (spacing * 4.0);
+    let margin = spacing * 2.0;
+    let visible_width = window.width() * zoom + margin;
+    let visible_height = window.height() * zoom + margin;
 
     let cam_x = cam_transform.translation.x;
     let cam_y = cam_transform.translation.y;
 
     let left = cam_x - visible_width / 2.0;
-    let bottom = cam_y - visible_height / 2.0;
-
     let right = cam_x + visible_width / 2.0;
+    let bottom = cam_y - visible_height / 2.0;
     let top = cam_y + visible_height / 2.0;
 
     let start_x = (left / spacing).floor() * spacing;
@@ -266,9 +278,7 @@ fn update_grid_sprites(
                 transform.translation.x = current_x;
                 transform.translation.y = current_y;
                 transform.translation.z = -100.0;
-
                 sprite.custom_size = Some(Vec2::splat(dot_size));
-
                 *visibility = Visibility::Visible;
             } else {
                 break;

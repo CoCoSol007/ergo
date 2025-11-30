@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use bevy::window::{CursorIcon, PrimaryWindow, SystemCursorIcon};
 
 use crate::cursor::CursorPosition;
+use crate::logic::Gate;
 
 const ZOOM_SCROLL_SPEED: f32 = 0.1;
 const ZOOM_SCROLL_MAX: f32 = 1.;
@@ -46,12 +47,7 @@ struct CameraInformation;
 struct CursorInformation;
 
 /// Sets up the 2D camera with an orthographic projection.
-fn setup_camera(
-    mut commands: Commands,
-    camera_settings: Res<CameraSettings>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
+fn setup_camera(mut commands: Commands, camera_settings: Res<CameraSettings>) {
     commands.spawn((
         Camera2d,
         Projection::from(OrthographicProjection {
@@ -60,12 +56,14 @@ fn setup_camera(
         }),
     ));
 
+    commands.spawn((Gate::And(None, None),));
     commands.spawn((
-        Mesh2d(meshes.add(Mesh::from(Circle {
-            radius: 100.0,
-            ..Default::default()
-        }))),
-        MeshMaterial2d(materials.add(ColorMaterial::from(Color::WHITE))),
+        Gate::Or(None, None),
+        Transform::from_translation(Vec3::new(100.0, 0.0, 0.0)),
+    ));
+    commands.spawn((
+        Gate::Not(None),
+        Transform::from_translation(Vec3::new(-100.0, 0.0, 0.0)),
     ));
 }
 

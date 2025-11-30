@@ -1,3 +1,4 @@
+pub mod action;
 pub mod camera;
 pub mod cursor;
 pub mod grid;
@@ -8,8 +9,8 @@ pub mod selection;
 use bevy::prelude::*;
 
 use crate::{
-    camera::CameraPlugin, cursor::CursorPlugin, grid::GridPlugin, logic::LogicPlugin,
-    renderer::RendererPlugin, selection::SelectionPlugin,
+    action::ActionPlugin, camera::CameraPlugin, cursor::CursorPlugin, grid::GridPlugin,
+    logic::LogicPlugin, renderer::RendererPlugin, selection::SelectionPlugin,
 };
 
 fn main() {
@@ -21,5 +22,6 @@ fn main() {
         .add_plugins(LogicPlugin)
         .add_plugins(RendererPlugin)
         .add_plugins(SelectionPlugin)
+        .add_plugins(ActionPlugin)
         .run();
 }

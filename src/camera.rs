@@ -117,18 +117,23 @@ fn update_information(
     let mut info_text = cursor_info_query.single_mut().unwrap();
 
     info_text.0 = format!(
-        "Cursor position : ({:.2}, {:.2})",
-        cursor_position.0.x, cursor_position.0.y
+        "Cursor screen position : ({:.2}, {:.2}), world position : ({:.2}, {:.2})",
+        cursor_position.in_screen.x,
+        cursor_position.in_screen.y,
+        cursor_position.in_world.x,
+        cursor_position.in_world.y
     );
 }
 
-/// Zooms the camera based on mouse wheel input.
 fn zoom_camera(
-    camera: Single<&mut Projection, With<Camera>>,
+    q_camera: Single<(&mut Projection, &mut Transform), With<Camera>>,
     mouse_wheel_input: Res<AccumulatedMouseScroll>,
     mut camera_settings: ResMut<CameraSettings>,
+    cursor: Res<CursorPosition>,
+    window: Single<&Window, With<PrimaryWindow>>,
 ) {
-    let mut projection = camera.into_inner();
+    let (mut projection, mut camera_transform) = q_camera.into_inner();
+
     let Projection::Orthographic(ref mut orthographic) = *projection else {
         return;
     };
@@ -137,15 +142,34 @@ fn zoom_camera(
         return;
     }
 
+    let cursor_screen_pos = cursor.in_screen;
+
+    let center = camera_transform.translation.truncate();
+    let half_width = window.width() / 2.0;
+    let half_height = window.height() / 2.0;
+    let offset_x = cursor_screen_pos.x - half_width;
+    let offset_y = half_height - cursor_screen_pos.y;
+
+    let mouse_local_vector = Vec2::new(offset_x, offset_y) * orthographic.scale;
+    let mouse_world_pos = center + mouse_local_vector;
+
+    let old_scale = orthographic.scale;
     let delta_zoom = -camera_settings.zoom_scroll_speed
         * (mouse_wheel_input.delta.y / mouse_wheel_input.delta.y.abs());
 
-    orthographic.scale = (orthographic.scale * (1.0 + delta_zoom)).clamp(
+    let new_scale = (old_scale * (1.0 + delta_zoom)).clamp(
         camera_settings.zoom_scroll_min,
         camera_settings.zoom_scroll_max,
     );
 
-    camera_settings.current_zoom = orthographic.scale;
+    orthographic.scale = new_scale;
+    camera_settings.current_zoom = new_scale;
+
+    let new_mouse_local_vector = mouse_local_vector * (new_scale / old_scale);
+    let new_center = mouse_world_pos - new_mouse_local_vector;
+
+    camera_transform.translation.x = new_center.x;
+    camera_transform.translation.y = new_center.y;
 }
 
 /// Moves the camera based on mouse drag input.

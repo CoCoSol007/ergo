@@ -3,13 +3,19 @@ use bevy::{prelude::*, window::PrimaryWindow};
 pub struct CursorPlugin;
 impl Plugin for CursorPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(CursorPosition(Vec2::ZERO))
-            .add_systems(Update, update_cursor_position);
+        app.insert_resource(CursorPosition {
+            in_world: Vec2::ZERO,
+            in_screen: Vec2::ZERO,
+        })
+        .add_systems(Update, update_cursor_position);
     }
 }
 
 #[derive(Resource)]
-pub struct CursorPosition(pub Vec2);
+pub struct CursorPosition {
+    pub in_world: Vec2,
+    pub in_screen: Vec2,
+}
 
 fn update_cursor_position(
     windows: Query<&Window, With<PrimaryWindow>>,
@@ -21,7 +27,8 @@ fn update_cursor_position(
 
     if let Some(screen_pos) = window.unwrap().cursor_position() {
         if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, screen_pos) {
-            cursor_position.0 = world_pos;
+            cursor_position.in_world = world_pos;
+            cursor_position.in_screen = screen_pos;
         }
     }
 }

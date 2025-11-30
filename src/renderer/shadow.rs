@@ -23,10 +23,10 @@ pub fn display_shadows(
     mut materials: ResMut<Assets<ColorMaterial>>,
     shadow_query: Query<Entity, With<ShadowEntity>>,
 ) {
-    let lift_vector = Vec3::new(0.0, SHADOW_OFFSET_Y, 1.0);
+    let lift_vector = Vec3::new(0.0, -SHADOW_OFFSET_Y, 1.0);
 
     for (entity, mesh, mut transform) in added_selection.iter_mut() {
-        transform.translation -= lift_vector;
+        transform.translation += lift_vector;
 
         let shadow_material = materials.add(ColorMaterial {
             color: Color::linear_rgba(0.01, 0.01, 0.01, 1.),
@@ -45,7 +45,7 @@ pub fn display_shadows(
 
     for entity in removed_selection.read() {
         if let Ok(mut transform) = unselected_transforms.get_mut(entity) {
-            transform.translation += lift_vector;
+            transform.translation -= lift_vector;
         }
 
         if let Ok(children) = children_query.get(entity) {

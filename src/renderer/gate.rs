@@ -1,8 +1,17 @@
 use crate::logic::*;
+
 use bevy::{
     asset::RenderAssetUsages,
     mesh::{Indices, PrimitiveTopology},
+    prelude::*,
 };
+
+pub struct GateRendererPlugin;
+impl Plugin for GateRendererPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, (display_gates, update_gate_colors));
+    }
+}
 
 impl Gate {
     pub fn mesh2d(&self) -> Mesh {

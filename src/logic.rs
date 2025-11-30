@@ -1,12 +1,9 @@
 use bevy::prelude::*;
-mod display;
 
 pub struct LogicPlugin;
 impl Plugin for LogicPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, update_logic_system)
-            .add_systems(Update, display::display_gates)
-            .add_systems(Update, display::update_gate_colors);
+        app.add_systems(Update, update_logic_system);
     }
 }
 

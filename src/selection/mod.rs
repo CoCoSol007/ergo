@@ -73,7 +73,7 @@ pub fn generic_click_system<T: CustomCollider>(
         if let Some((entity, _, _, was_selected)) = clicked_target {
             if is_shift {
                 if was_selected {
-                    commands.entity(entity).remove::<Selected>();
+                    click_state.pending_selected_entity = Some(entity);
                 } else {
                     commands.entity(entity).insert(Selected);
                 }

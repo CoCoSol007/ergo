@@ -59,8 +59,8 @@ pub fn generic_click_system<T: CustomCollider>(
                 for selected in selected_query.iter() {
                     commands.entity(selected).remove::<Selected>();
                 }
+                commands.entity(entity).insert(Selected);
             }
-            commands.entity(entity).insert(Selected);
         }
     } else if !is_shift {
         for selected in selected_query.iter() {

@@ -22,10 +22,16 @@ fn update_cursor_position(
     camera_query: Query<(&Camera, &GlobalTransform), With<Camera>>,
     mut cursor_position: ResMut<CursorPosition>,
 ) {
-    let window = windows.single();
-    let (camera, camera_transform) = camera_query.single().unwrap();
+    let Ok(window) = windows.single() else {
+        println!("No primary window found for updating cursor position.");
+        return;
+    };
+    let Ok((camera, camera_transform)) = camera_query.single() else {
+        println!("No camera found for updating cursor position.");
+        return;
+    };
 
-    if let Some(screen_pos) = window.unwrap().cursor_position() {
+    if let Some(screen_pos) = window.cursor_position() {
         if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, screen_pos) {
             cursor_position.in_world = world_pos;
             cursor_position.in_screen = screen_pos;

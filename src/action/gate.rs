@@ -1,11 +1,11 @@
 use bevy::{input::keyboard::KeyboardInput, prelude::*};
 
-use crate::{cursor::CursorPosition, selection::Selected};
+use crate::{cursor::CursorPosition, logic::update_logic_system, selection::Selected};
 
 pub struct ActionGatePlugin;
 impl Plugin for ActionGatePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, suppr_items)
+        app.add_systems(Update, suppr_items.after(update_logic_system))
             .add_systems(Update, movement_item);
     }
 }

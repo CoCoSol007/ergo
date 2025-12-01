@@ -183,6 +183,7 @@ pub fn display_gates(
 pub fn update_gate_colors(
     mut materials: ResMut<Assets<ColorMaterial>>,
     query: Query<(&Value, &MeshMaterial2d<ColorMaterial>), Changed<Value>>,
+    all_query: Query<&MeshMaterial2d<ColorMaterial>, With<Item>>,
     mut removed_values: RemovedComponents<Value>,
 ) {
     for (value, mat_handle) in query.iter() {
@@ -196,7 +197,7 @@ pub fn update_gate_colors(
     }
 
     for entity in removed_values.read() {
-        if let Ok((_, mat_handle)) = query.get(entity) {
+        if let Ok(mat_handle) = all_query.get(entity) {
             if let Some(material) = materials.get_mut(mat_handle) {
                 material.color = Color::srgb(0.5, 0.5, 0.5);
             }

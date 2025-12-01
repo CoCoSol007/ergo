@@ -87,8 +87,14 @@ fn update_information(
     mut cursor_info_query: Query<&mut Text, (With<CursorInformation>, Without<CameraInformation>)>,
     cursor_position: Res<CursorPosition>,
 ) {
-    let (camera_transform, camera_projection) = camera_query.single().unwrap();
-    let mut info_text = camera_info_query.single_mut().unwrap();
+    let Ok((camera_transform, camera_projection)) = camera_query.single() else {
+        println!("No camera found for updating information.");
+        return;
+    };
+    let Ok(mut info_text) = camera_info_query.single_mut() else {
+        println!("No camera information text found for updating.");
+        return;
+    };
 
     let Projection::Orthographic(orthographic_projection) = camera_projection else {
         return;
@@ -101,7 +107,10 @@ fn update_information(
         orthographic_projection.scale
     );
 
-    let mut info_text = cursor_info_query.single_mut().unwrap();
+    let Ok(mut info_text) = cursor_info_query.single_mut() else {
+        println!("No cursor information text found for updating.");
+        return;
+    };
 
     info_text.0 = format!(
         "Cursor screen position : ({:.2}, {:.2}), world position : ({:.2}, {:.2})",

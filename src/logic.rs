@@ -7,7 +7,11 @@ impl Plugin for LogicPlugin {
     }
 }
 
+#[derive(Component, Default)]
+pub struct Item;
+
 #[derive(Component)]
+#[require(Item)]
 pub enum Gate {
     And(Option<Entity>, Option<Entity>),
     Or(Option<Entity>, Option<Entity>),
@@ -29,9 +33,14 @@ impl Gate {
                 let Some(b) = b else {
                     return None;
                 };
-                let a_val = values.get(*a).map_or(false, |v| v.state);
-                let b_val = values.get(*b).map_or(false, |v| v.state);
-                Some(a_val && b_val)
+                let Ok(a_value) = values.get(*a) else {
+                    return None;
+                };
+                let Ok(b_value) = values.get(*b) else {
+                    return None;
+                };
+
+                Some(a_value.state && b_value.state)
             }
             Gate::Or(a, b) => {
                 let Some(a) = a else {
@@ -40,35 +49,87 @@ impl Gate {
                 let Some(b) = b else {
                     return None;
                 };
-                let a_val = values.get(*a).map_or(false, |v| v.state);
-                let b_val = values.get(*b).map_or(false, |v| v.state);
-                Some(a_val || b_val)
+                let Ok(a_value) = values.get(*a) else {
+                    return None;
+                };
+                let Ok(b_value) = values.get(*b) else {
+                    return None;
+                };
+                Some(a_value.state || b_value.state)
             }
             Gate::Not(a) => {
                 let Some(a) = a else {
                     return None;
                 };
-                let a_val = values.get(*a).map_or(false, |v| v.state);
-                Some(!a_val)
+
+                let Ok(a_value) = values.get(*a) else {
+                    return None;
+                };
+
+                Some(!a_value.state)
             }
         }
     }
 }
 
-fn update_logic_system(
-    gates: Query<(&Gate, Entity)>,
+pub fn update_logic_system(
+    mut gates: Query<(&mut Gate, Entity)>,
     values: Query<&Value>,
     mut commands: Commands,
 ) {
-    for (gate, entity) in gates.iter() {
+    for (mut gate, entity) in gates.iter_mut() {
         if let Some(state) = gate.evaluate(&values) {
             commands.entity(entity).insert(Value { state });
         } else {
+            *gate = match &*gate {
+                Gate::And(a, b) => {
+                    let mut new_a = None;
+                    let mut new_b = None;
+
+                    if let Some(original_a) = a {
+                        if commands.get_entity(*original_a).is_ok() {
+                            new_a = Some(*original_a);
+                        }
+                    }
+                    if let Some(original_b) = b {
+                        if commands.get_entity(*original_b).is_ok() {
+                            new_b = Some(*original_b);
+                        }
+                    }
+                    Gate::And(new_a, new_b)
+                }
+                Gate::Or(a, b) => {
+                    let mut new_a = None;
+                    let mut new_b = None;
+
+                    if let Some(original_a) = a {
+                        if commands.get_entity(*original_a).is_ok() {
+                            new_a = Some(*original_a);
+                        }
+                    }
+                    if let Some(original_b) = b {
+                        if commands.get_entity(*original_b).is_ok() {
+                            new_b = Some(*original_b);
+                        }
+                    }
+                    Gate::Or(new_a, new_b)
+                }
+                Gate::Not(a) => {
+                    let mut new_a = None;
+
+                    if let Some(original_a) = a {
+                        if commands.get_entity(*original_a).is_ok() {
+                            new_a = Some(*original_a);
+                        }
+                    }
+                    Gate::Not(new_a)
+                }
+            };
             commands.entity(entity).try_remove::<Value>();
         }
     }
 }
 
 #[derive(Component)]
-#[require(Value)]
+#[require(Value, Item)]
 pub struct LogicButton;

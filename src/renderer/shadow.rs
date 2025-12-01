@@ -4,10 +4,13 @@ use crate::selection::Selected;
 
 const SHADOW_OFFSET_Y: f32 = -5.0;
 
+#[derive(Component, Default)]
+pub struct ShadowEffect;
+
 pub struct ShadowRendererPlugin;
 impl Plugin for ShadowRendererPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, display_shadows);
+        app.add_systems(Update, (display_shadows, display_selection_without_shadow));
     }
 }
 
@@ -16,8 +19,11 @@ pub struct ShadowEntity;
 
 pub fn display_shadows(
     mut commands: Commands,
-    mut added_selection: Query<(Entity, &Mesh2d, &mut Transform), Added<Selected>>,
-    mut unselected_transforms: Query<&mut Transform, Without<Selected>>,
+    mut added_selection: Query<
+        (Entity, &Mesh2d, &mut Transform),
+        (With<ShadowEffect>, Added<Selected>),
+    >,
+    mut unselected_transforms: Query<&mut Transform, (Without<Selected>, With<ShadowEffect>)>,
     mut removed_selection: RemovedComponents<Selected>,
     children_query: Query<&Children>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -52,6 +58,35 @@ pub fn display_shadows(
             for &child in children.into_iter().filter(|c| shadow_query.contains(**c)) {
                 commands.entity(child).despawn();
             }
+        }
+    }
+}
+
+pub fn display_selection_without_shadow(
+    mut added_selection: Query<
+        &mut MeshMaterial2d<ColorMaterial>,
+        (Without<ShadowEffect>, Added<Selected>),
+    >,
+    mut unselected_transforms: Query<
+        &mut MeshMaterial2d<ColorMaterial>,
+        (Without<Selected>, Without<ShadowEffect>),
+    >,
+    mut removed_selection: RemovedComponents<Selected>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    for mut material in added_selection.iter_mut() {
+        *material = MeshMaterial2d(materials.add(ColorMaterial {
+            color: Color::linear_rgba(0.3, 0.3, 0.3, 1.),
+            ..default()
+        }));
+    }
+
+    for entity in removed_selection.read() {
+        if let Ok(mut material) = unselected_transforms.get_mut(entity) {
+            *material = MeshMaterial2d(materials.add(ColorMaterial {
+                color: Color::linear_rgba(1., 1.0, 1.0, 1.),
+                ..default()
+            }));
         }
     }
 }

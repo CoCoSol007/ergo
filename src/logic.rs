@@ -1,3 +1,4 @@
+use crate::selection::Moveable;
 use bevy::prelude::*;
 
 pub struct LogicPlugin;
@@ -11,7 +12,7 @@ impl Plugin for LogicPlugin {
 pub struct Item;
 
 #[derive(Component)]
-#[require(Item)]
+#[require(Item, Moveable)]
 pub enum Gate {
     And(Option<Entity>, Option<Entity>),
     Or(Option<Entity>, Option<Entity>),
@@ -131,5 +132,5 @@ pub fn update_logic_system(
 }
 
 #[derive(Component)]
-#[require(Value, Item)]
+#[require(Value, Item, Moveable)]
 pub struct LogicButton;

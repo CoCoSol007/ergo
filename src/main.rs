@@ -6,13 +6,14 @@ mod grid;
 mod link;
 mod logic;
 mod renderer;
-mod selection;
+pub mod selection;
 
 use bevy::prelude::*;
 
 use crate::{
     action::ActionPlugin, camera::CameraPlugin, creation::CreationPlugin, cursor::CursorPlugin,
-    grid::GridPlugin, logic::LogicPlugin, renderer::RendererPlugin, selection::SelectionPlugin,
+    grid::GridPlugin, link::LinkPlugin, logic::LogicPlugin, renderer::RendererPlugin,
+    selection::SelectionPlugin,
 };
 
 fn main() {
@@ -26,5 +27,6 @@ fn main() {
         .add_plugins(SelectionPlugin)
         .add_plugins(ActionPlugin)
         .add_plugins(CreationPlugin)
+        .add_plugins(LinkPlugin)
         .run();
 }

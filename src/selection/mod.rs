@@ -1,11 +1,16 @@
-use crate::{cursor::CursorPosition, logic::Gate};
+use crate::{
+    cursor::CursorPosition,
+    logic::{Gate, LogicButton},
+};
 use bevy::prelude::*;
+mod button;
 mod gate;
 
 pub struct SelectionPlugin;
 impl Plugin for SelectionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, generic_click_system::<Gate>);
+        app.add_systems(Update, generic_click_system::<Gate>)
+            .add_systems(Update, generic_click_system::<LogicButton>);
     }
 }
 

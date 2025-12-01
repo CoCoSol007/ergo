@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy::window::{CursorIcon, PrimaryWindow, SystemCursorIcon};
 
 use crate::cursor::CursorPosition;
-use crate::logic::Gate;
+use crate::logic::{Gate, LogicButton};
 
 const ZOOM_SCROLL_SPEED: f32 = 0.1;
 const ZOOM_SCROLL_MAX: f32 = 1.;
@@ -57,6 +57,10 @@ fn setup_camera(mut commands: Commands, camera_settings: Res<CameraSettings>) {
     ));
 
     commands.spawn((Gate::And(None, None),));
+    commands.spawn((
+        LogicButton,
+        Transform::from_translation(Vec3::new(-200.0, 0.0, 0.0)),
+    ));
     commands.spawn((
         Gate::Or(None, None),
         Transform::from_translation(Vec3::new(100.0, 0.0, 0.0)),

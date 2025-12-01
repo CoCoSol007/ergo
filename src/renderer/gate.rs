@@ -9,7 +9,7 @@ use bevy::{
 pub struct GateRendererPlugin;
 impl Plugin for GateRendererPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (display_gates, update_gate_colors));
+        app.add_systems(Update, (display_gates, update_gate_colors, display_buttons));
     }
 }
 
@@ -183,6 +183,7 @@ pub fn display_gates(
 pub fn update_gate_colors(
     mut materials: ResMut<Assets<ColorMaterial>>,
     query: Query<(&Value, &MeshMaterial2d<ColorMaterial>), Changed<Value>>,
+    mut removed_values: RemovedComponents<Value>,
 ) {
     for (value, mat_handle) in query.iter() {
         if let Some(material) = materials.get_mut(mat_handle) {
@@ -192,5 +193,30 @@ pub fn update_gate_colors(
                 Color::srgb(1.0, 0.0, 0.0)
             };
         }
+    }
+
+    for entity in removed_values.read() {
+        if let Ok((_, mat_handle)) = query.get(entity) {
+            if let Some(material) = materials.get_mut(mat_handle) {
+                material.color = Color::srgb(0.5, 0.5, 0.5);
+            }
+        }
+    }
+}
+
+pub fn display_buttons(
+    new_buttons: Query<(Entity, &LogicButton), Added<LogicButton>>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    for (entity, _) in new_buttons.iter() {
+        commands.entity(entity).insert((
+            Mesh2d(meshes.add(Mesh::from(Circle {
+                radius: 10.0,
+                ..default()
+            }))),
+            MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(1.0, 0., 0.)))),
+        ));
     }
 }

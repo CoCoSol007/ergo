@@ -14,7 +14,7 @@ pub enum Gate {
     Not(Option<Entity>),
 }
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct Value {
     pub state: bool,
 }
@@ -68,3 +68,7 @@ fn update_logic_system(
         }
     }
 }
+
+#[derive(Component)]
+#[require(Value)]
+pub struct LogicButton;

@@ -85,6 +85,11 @@ pub fn generic_click_system<T: CustomCollider>(
                     commands.entity(entity).insert(Selected);
                 } else {
                     click_state.pending_selected_entity = Some(entity);
+                    for selected in selected_query.iter() {
+                        if selected != entity {
+                            commands.entity(selected).remove::<Selected>();
+                        }
+                    }
                 }
             }
         } else if !is_shift {
@@ -101,9 +106,7 @@ pub fn generic_click_system<T: CustomCollider>(
 
             if distance < drag_threshold {
                 for selected in selected_query.iter() {
-                    if selected == pending_entity {
-                        commands.entity(selected).remove::<Selected>();
-                    }
+                    commands.entity(selected).remove::<Selected>();
                 }
                 commands.entity(pending_entity).remove::<Selected>();
             }

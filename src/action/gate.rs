@@ -2,7 +2,7 @@ use bevy::{input::keyboard::KeyboardInput, prelude::*};
 
 use crate::{
     cursor::CursorPosition,
-    link::{self, Link},
+    link::Link,
     logic::{Gate, update_logic_system},
     selection::Selected,
 };

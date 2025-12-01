@@ -1,11 +1,12 @@
-pub mod action;
-pub mod camera;
+mod action;
+mod camera;
 mod creation;
-pub mod cursor;
-pub mod grid;
-pub mod logic;
-pub mod renderer;
-pub mod selection;
+mod cursor;
+mod grid;
+mod link;
+mod logic;
+mod renderer;
+mod selection;
 
 use bevy::prelude::*;
 

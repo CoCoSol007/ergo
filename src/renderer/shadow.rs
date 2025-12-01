@@ -35,7 +35,7 @@ pub fn display_shadows(
         transform.translation += lift_vector;
 
         let shadow_material = materials.add(ColorMaterial {
-            color: Color::linear_rgba(0.01, 0.01, 0.01, 1.),
+            color: Color::linear_rgba(0., 0., 0., 0.75),
             ..default()
         });
 
